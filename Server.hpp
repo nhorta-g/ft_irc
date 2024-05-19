@@ -1,8 +1,9 @@
 //#pragma once
 #ifndef SERVER_HPP
-#define SERVER_HPP
+# define SERVER_HPP
 
 # include "Client.hpp"
+# include "Channel.hpp"
 
 #include <iostream>
 #include <vector> //-> for vector
@@ -20,7 +21,6 @@
 #include <cstdlib>
 #include <algorithm>
 #include <sstream>
-#include <map>
 //-------------------------------------------------------//
 #define RED "\e[1;31m"
 #define WHI "\e[0;37m"
@@ -33,18 +33,17 @@ class Channel;
 class Server
 {
 private:
-	int _Port; //-> server port
-	int _SerSocketFd; //-> server fd
+	int Port; //-> server port
+	int SerSocketFd; //-> server fd
 	static bool Signal;
-	std::vector<Client> _clients;
-	std::map<std::string, Channel*> _channels;
-	std::vector<struct pollfd> _fds;
-
+	std::vector<Client> clients;
+	std::vector<struct pollfd> fds;
+	std::vector<Channel> channels;
 	std::string serverpass;
 public:
 	Server(int port, char *pass){
-		_SerSocketFd = -1;
-		_Port = port;
+		SerSocketFd = -1;
+		Port = port;
 		std::string tmp(pass);
 		serverpass = tmp;
 	}
@@ -56,21 +55,35 @@ public:
 	void CloseFds();
 	void ClearClients(int fd);
 
-	Client& get_client(int, std::vector<Client>&);
-	void registration(std::string, Client&);
-
-	void validate_cli(Client&);
-
 	void client_sender(int fd, std::string str){
+	str += "\r\n";
 	if(send(fd, str.c_str(), str.size(), 0) == -1)
 		std::cerr << "not able to send data" << std::endl;
+	std::cout << str; //print in the server side to see what is going on
 	}
-	std::vector<std::string> tokenit_please(std::string str);
-	// Channel NUNO
-	void addChannel(std::string name);
+
+	//COMMANDS
+	void cmd_execute(std::string cli_str,Client& cli);
+	void change_nick(std::string cli_str,Client& cli);
+		//JOIN
+		void	Server::joinChannel(Client& cli,std::string channelName);
+		bool channelNameEquals(const Channel& channel, const std::string& name);
+		void join_cmd(std::string, Client&);
+
+	std::string str_cutter(std::string);
+
+	//ServerUtils
+	void handle_cap(std::string str, Client& cli);
+	void handle_nc(std::string str, Client& cli);
+	void validate_cli(Client&);
+	std::vector<std::string> tokenit_please(std::string str, int x);
+	bool verify_nicks(std::string str);
+	int sendIrcMessage(int clientFd, std::string message);
+
+	//GETTERS AND SETTERS
+	Client& get_client(int, std::vector<Client>&);
+	std::vector<Channel>& getChannels();
+	//void Server::setChannels(const std::vector<Channel>& newChannels);
 };
-
-
-
 
 # endif
